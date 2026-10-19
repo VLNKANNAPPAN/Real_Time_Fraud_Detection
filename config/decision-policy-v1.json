@@ -1,0 +1,9 @@
+{
+  "policy_version": "decision-policy-v1",
+  "review_score": 0.075,
+  "block_score": 0.40,
+  "velocity_count_5m": 3,
+  "unusual_amount_ratio": 3.0,
+  "minimum_review_signals": 3,
+  "minimum_block_signals": 3
+}

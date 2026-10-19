@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "realtime-fraud-engine"
+version = "1.0.0"
+description = "Local event-time fraud scoring engineering project"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115,<1", "uvicorn>=0.34,<1", "pydantic-settings>=2.8,<3",
+  "sqlalchemy>=2.0,<3", "alembic>=1.15,<2", "psycopg[binary]>=3.2,<4",
+  "redis>=5,<7", "confluent-kafka>=2.6,<3",
+  "numpy>=2,<3", "pandas>=2.2,<3", "scipy>=1.14,<2", "scikit-learn>=1.6,<2", "joblib>=1.4,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "httpx>=0.28,<1", "ruff>=0.11,<1", "fakeredis[lua]>=2.30,<3", "pip-audit>=2.9,<3"]
+dashboard = ["streamlit>=1.40,<2"]
+
+[project.scripts]
+fraud-generate = "fraud_engine.simulator:main"
+fraud-train = "fraud_engine.training:main"
+fraud-produce = "fraud_engine.kafka_io:produce_main"
+fraud-consume-probe = "fraud_engine.kafka_io:probe_main"
+fraud-process = "fraud_engine.kafka_io:processor_main"
+fraud-init-topics = "fraud_engine.kafka_io:init_topics_main"
+fraud-evaluate = "fraud_engine.evaluation:main"
+fraud-dashboard = "fraud_engine.dashboard:cli_main"
+fraud-load-test = "fraud_engine.load_test:main"
+fraud-export-monitoring = "fraud_engine.drift:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: requires running local Kafka, Redis, and PostgreSQL containers"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

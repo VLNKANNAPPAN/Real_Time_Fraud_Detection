@@ -1,0 +1,7 @@
+# Phase 05A — online feature storage design
+
+The approved storage decision is [ADR 0003](../decisions/0003-online-feature-storage.md). It maps every `features-v1` feature to one shared event-time sorted set and immutable entry hash, plus identity and snapshot keys. There is no independent counter whose value can diverge from history. The initial maximum window is 24 hours and allowed lateness is two minutes; pruning uses the watermark minus both durations. Key TTL is 26 hours of inactivity and is only cache cleanup, not a durable retention guarantee.
+
+The critical operation is an atomic Lua read, calculate, save-snapshot, insert, and prune sequence. A duplicate first checks event/transaction identity and returns the frozen snapshot. A too-late event is REVIEW-only and never inserted. The current event cannot enter its own window. A mid-operation process crash cannot expose partially updated Redis keys because the Lua script is atomic. A crash after the script returns is handled by saved snapshot or PostgreSQL rebuild. Cache rebuild requires a per-user external lock and only completed DB records. Memory safety is an explicit 20,000-event guard and Redis `noeviction` setting, not silent approximation.
+
+The design cannot yet prove cross-service correctness because the DB claim/lock/rebuild orchestration belongs to checkpoint 8. This phase deliberately contains no application feature mutation; implementation is recorded in 5B.

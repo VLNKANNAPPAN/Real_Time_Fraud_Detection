@@ -1,0 +1,13 @@
+# Event model
+
+## Immutable transaction-created envelope (schema v1)
+
+Required: `event_id`, `transaction_id`, `user_id`, `event_version=1`, `event_timestamp`, `producer_timestamp`, `amount`, `currency`, `merchant_category`, `country`, `device_id`, `payment_method`. IDs are non-empty opaque strings. Timestamps are timezone-aware UTC instants; `amount` is a positive integer in INR paise, not an imprecise float. The first dataset is INR-only. `account_age_days` is an optional nonnegative as-of-event attribute. The prototype uses one `TRANSACTION_CREATED` event per transaction. No updates or cancellation semantics are implied by version 1.
+
+`event_id` is delivery-independent event identity. `transaction_id` is stable business identity. `user_id` owns behavioral history and is the Kafka key. `event_version` is the **schema version**, not a transaction revision number. A future transaction update needs a separately defined event type and lifecycle, not a silent reinterpretation of `event_version`.
+
+`event_timestamp` is when the transaction occurred and defines feature windows. `producer_timestamp` is when the producer emitted the envelope; it helps diagnose queue delay and must not replace event time. `processing_timestamp` is assigned by the processor when it begins an attempt; final decision and commit timestamps are separate. All are recorded, with different meanings. A producer clock error can cause a future event; validation rejects timestamps beyond a configured skew bound rather than letting them advance a user watermark arbitrarily. Producer timestamp is never used as a feature.
+
+The canonical payload digest covers normalized immutable fields (including event and transaction IDs, user, schema version, timestamps, amount, and categorical fields) using a documented deterministic serialization. Equal event ID + digest is a delivery duplicate. Equal event ID + different digest is a conflict. New event ID + existing transaction ID is also a conflict for v1, even if content otherwise matches. Neither conflict mutates the existing decision; both get a durable or DLQ quarantine record. The PostgreSQL unique constraints are the final arbiter under races.
+
+Schema evolution is additive only within a declared compatibility rule. New required fields or changed meaning require a new event version and explicit consumer/upcaster support, plus feature and model version review. Unknown major versions route to quarantine. Preserve the original bytes and parsed canonical form for audit. A feature-definition version is independent of event schema version; a model artifact declares the feature version it accepts.
